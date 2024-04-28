@@ -76,6 +76,7 @@ Client                                Server
 - [mining.ping](#mining-ping)
 - [mining.pong](#mining-pong)
 - [mining.print](#mining-print)
+- [mining.hashrate](#mining-hashrate)
 
 
 ### Errors
@@ -323,6 +324,26 @@ With this method a server can send a message to the miner to print on screen.
 - `1` - Warning
 - `2` - Error
 - `3` - Debug
+
+#### Response
+No response is required for this call.
+
+### mining.hashrate
+
+With this method a client/miner can submit the reported hashrate (in miner) to the pool (similar to `eth_submitHashrate` in ethash).
+
+
+#### Request
+
+```json
+{"id": 4, "method": "mining.hashrate", "params": [1000]}
+```
+
+- [ `id` : `int` ]: request id
+- [ `method` : `string` ]: RPC method name
+- [ `params` : (`int`, `string`) ]: list of method
+  parameters
+  1. Reported hashrate in H/s
 
 #### Response
 No response is required for this call.
