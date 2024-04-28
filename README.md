@@ -38,14 +38,28 @@ For further details on the members of request and response objects consult the
 
 ### Protocol flow example
 
-The following shows what a session might look like from authorization to
+The following shows what a session might look like from subscription to
 submitting a solution.
 
 ```
 Client                                Server
   |                                     |
+  | --------- mining.subscribe -------> |
   | --------- mining.authorize -------> |
-  | <-------- mining.set_extranonce --- |
+  | <-------- mining.set_difficulty --- |
+  |                                     |----
+  | <---------- mining.notify --------- |<--/
+  |                                     |
+  | ---------- mining.submit ---------> |
+```
+
+### New difficulty protocol flow example
+
+The following shows what communication may look like when a new difficulty is set for a miner.
+
+```
+Client                                Server
+  |                                     |
   | <-------- mining.set_difficulty --- |
   |                                     |----
   | <---------- mining.notify --------- |<--/
@@ -54,9 +68,9 @@ Client                                Server
 ```
 
 ### Methods
+- [mining.subscribe](#mining-subscribe)
 - [mining.authorize](#mining-authorize)
 - [mining.notify](#mining-notify)
-- [mining.set_extranonce](#mining-set_extranonce)
 - [mining.set_difficulty](#mining-set_difficulty)
 - [mining.submit](#mining-submit)
 - [mining.ping](#mining-ping)
@@ -93,42 +107,70 @@ consumption.
 Implementors MAY choose to include an optional `data` object with additional
 information relevant to the error.
 
+Including `null` value in `error` object is against the JSON RPC spec. Error should only be included in the response when there is an actual error.
+
+### mining.subscribe
+
+In order to initiate or resume a session with the server, a client needs to
+call the subscribe method.
+
+This method call will only be executed by clients.
+
+
+#### Request:
+
+```
+{"id": 1, "method": "mining.subscribe", "params": ["MyMiner/1.0.0"]}\n
+```
+
+- [ `id` : `int` ]: request id
+- [ `method` : `string` ]: RPC method name
+- [ `params` : (`string`) ]: list of method
+  parameters
+  1. MUST be name and version of mining software in the given format or empty
+     string
+
+#### Response
+
+```
+{ "id": 1, "result": ["ABC123"] }\n
+```
+
+- [ `id` : `int` ]: request id
+- [ `result` : (`string`, `int`) ]:
+    1. This SHOULD be a unique session id
+
 ### mining.authorize
 
 Before a client can submit solutions to a server it MUST authorize at least one worker.
 
 This method call will only be executed by clients.
 
-
 #### Request
 
 ```
-{"id": 2, "method": "mining.authorize", "params": ["xel:WALLET_ADDRESS", WORKER_NAME", "WORKER_PASSWORD", "MyMiner/1.0.0"]}\n
+{"id": 2, "method": "mining.authorize", "params": ["xel:WALLET_ADDRESS", WORKER_NAME", "WORKER_PASSWORD"]}\n
 ```
 
 - [ `id` : `int` ]: request id
 - [ `method` : `string` ]: RPC method name
-- [ `params` : (`string`, `string`, `string`, `string`) ]: list of method parameters
+- [ `params` : (`string`, `string`, `string`) ]: list of method parameters
     1. The miner wallet address
     2. The worker name
     3. The worker password
-    4. The user agent string of the miner
 
 
 #### Response
 
 ```
-{"id": 2, "result": ["ABC123", "EXTRANONCE", 8], "error": null}\n
+{"id": 2, "result": ["EXTRANONCE", 32]}\n
 ```
 
 - [ `id` : `int` ]: request id
-- [ `result` : (`string`, `string`, `int`) ]:
-    - MUST be `null` if an error occurred or otherwise
-        1. SHOULD be a unique session id
-        2. Extra nonce for the miner to use
-        3. The length of the extra nonce
+- [ `result` : (`string`, `int`) ]:
+      1. Extra nonce for the miner to use
+      2. The length of the extra nonce
 - [ `error` : (`int`, `string`, `object`) ]
-    - MUST be `null` if `result` is `true`
     - If authorization failed then it MUST contain error object with the
       appropriate error id and description
 
@@ -198,7 +240,7 @@ This method call will only be executed by clients.
 #### Request
 
 ```
-{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "d70fd222", "98b6ac44d2", ""]}\n
+{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "d70fd222", "98b6ac44d2", "000000123"]}\n
 ```
 
 - [ `id` : `int` ]: request id
@@ -213,14 +255,74 @@ This method call will only be executed by clients.
 #### Response
 
 ```
-{"id": 4, "result": true, "error": null}\n
+{"id": 4, "result": true}\n
 ```
 
 - [ `id` : `int` ]: request id
 - [ `result`: `bool` ]: submission accepted
     - MUST be `true` if accepted
-    - MUST be `null` if an error occurred
 - [ `error` : (`int`, `string`, `object`) ]
-    - MUST be `null` if `result` is `true`
     - If submission failed then it MUST contain error object with the
       appropriate error id and description
+
+### mining.ping
+
+With this method a pool can check if a miner connection is still alive.
+This method call will only be executed by servers.
+
+
+#### Request
+
+```
+{"id": 4, "method": "mining.ping"}\n
+```
+
+- [ `id` : `int` ]: request id
+- [ `method` : `string` ]: RPC method name
+
+#### Response
+No response is required for this call.  The client should respond with a `mining.pong` call.
+
+### mining.pong
+
+With this method a client/miner can respond to signify that the connection is still alive.
+This method call will only be executed by clients.
+
+
+#### Request
+
+```
+{"id": 4, "method": "mining.pong"}\n
+```
+
+- [ `id` : `int` ]: request id
+- [ `method` : `string` ]: RPC method name
+
+#### Response
+No response is required for this call.
+
+### mining.print
+
+With this method a server can send a message to the miner to print on screen.
+
+#### Request
+
+```
+{"id": 4, "method": "mining.print", "params": [0, "Your wallet address is invalid, please check before attempting to reconnect."]}\n
+```
+
+- [ `id` : `int` ]: request id
+- [ `method` : `string` ]: RPC method name
+- [ `params` : (`int`, `string`) ]: list of method
+  parameters
+  1. Print level
+  2. Message to print
+
+#### Print Levels
+- `0` - Information
+- `1` - Warning
+- `2` - Error
+- `3` - Debug
+
+#### Response
+No response is required for this call.
