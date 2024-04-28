@@ -7,8 +7,9 @@ miners.
 The initial protocol was written for Bitcoin and contains several pieces that
 need adjustment in order to be usable with xelis.
 
-This is currently just a proposal and is meant to be as frictionless to implement as possible.
+This is currently just a proposal and is meant to be as frictionless to implement as possible.  
 
+If you have any comments, suggestions, or improvements, please open an issue or a pull request.
 
 ## Specification
 
@@ -61,8 +62,7 @@ The following shows what communication may look like when a new difficulty is se
 Client                                Server
   |                                     |
   | <-------- mining.set_difficulty --- |
-  |                                     |----
-  | <---------- mining.notify --------- |<--/
+  | <---------- mining.notify --------- |
   |                                     |
   | ---------- mining.submit ---------> |
 ```
@@ -87,7 +87,7 @@ field which maps to a **list** of the following values:
 - [ `message` : `string` ]
 - [ `data` : `object` ]
 
-```
+```json
 {"id": 10, "result": null, "error": [21, "Job not found", null]}
 ```
 
@@ -111,16 +111,15 @@ Including `null` value in `error` object is against the JSON RPC spec. Error sho
 
 ### mining.subscribe
 
-In order to initiate or resume a session with the server, a client needs to
-call the subscribe method.
+In order to initiate a session with the server, a client needs to call the subscribe method.
 
 This method call will only be executed by clients.
 
 
 #### Request:
 
-```
-{"id": 1, "method": "mining.subscribe", "params": ["MyMiner/1.0.0"]}\n
+```json
+{"id": 1, "method": "mining.subscribe", "params": ["MyMiner/1.0.0"]}
 ```
 
 - [ `id` : `int` ]: request id
@@ -132,8 +131,8 @@ This method call will only be executed by clients.
 
 #### Response
 
-```
-{ "id": 1, "result": ["ABC123"] }\n
+```json
+{ "id": 1, "result": ["ABC123"] }
 ```
 
 - [ `id` : `int` ]: request id
@@ -148,8 +147,8 @@ This method call will only be executed by clients.
 
 #### Request
 
-```
-{"id": 2, "method": "mining.authorize", "params": ["xel:WALLET_ADDRESS", WORKER_NAME", "WORKER_PASSWORD"]}\n
+```json
+{"id": 2, "method": "mining.authorize", "params": ["xel:WALLET_ADDRESS", "WORKER_NAME", "WORKER_PASSWORD"]}
 ```
 
 - [ `id` : `int` ]: request id
@@ -162,8 +161,8 @@ This method call will only be executed by clients.
 
 #### Response
 
-```
-{"id": 2, "result": ["EXTRANONCE", 32]}\n
+```json
+{"id": 2, "result": ["EXTRANONCE", 32]}
 ```
 
 - [ `id` : `int` ]: request id
@@ -184,8 +183,8 @@ This method call will only be executed by the server.
 
 #### Request
 
-```
-{"id": null, "method": "mining.set_difficulty", "params": [1]}\n
+```json
+{"id": null, "method": "mining.set_difficulty", "params": [1]}
 ```
 
 - [ `id` : `int` ]: request id
@@ -213,8 +212,8 @@ This method call will only be executed by the server.
 
 #### Request
 
-```
-{"id": null, "method": "mining.notify", "params": ["d70fd222", "abc123", "def456", true ]}\n
+```json
+{"id": null, "method": "mining.notify", "params": ["d70fd222", "abc123", "def456", true ]}
 ```
 
 - [ `id` : `int` ]: request id
@@ -239,8 +238,8 @@ This method call will only be executed by clients.
 
 #### Request
 
-```
-{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "d70fd222", "98b6ac44d2", "000000123"]}\n
+```json
+{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "d70fd222", "98b6ac44d2", "000000123"]}
 ```
 
 - [ `id` : `int` ]: request id
@@ -254,8 +253,8 @@ This method call will only be executed by clients.
 
 #### Response
 
-```
-{"id": 4, "result": true}\n
+```json
+{"id": 4, "result": true}
 ```
 
 - [ `id` : `int` ]: request id
@@ -273,8 +272,8 @@ This method call will only be executed by servers.
 
 #### Request
 
-```
-{"id": 4, "method": "mining.ping"}\n
+```json
+{"id": 4, "method": "mining.ping"}
 ```
 
 - [ `id` : `int` ]: request id
@@ -291,8 +290,8 @@ This method call will only be executed by clients.
 
 #### Request
 
-```
-{"id": 4, "method": "mining.pong"}\n
+```json
+{"id": 4, "method": "mining.pong"}
 ```
 
 - [ `id` : `int` ]: request id
@@ -307,8 +306,8 @@ With this method a server can send a message to the miner to print on screen.
 
 #### Request
 
-```
-{"id": 4, "method": "mining.print", "params": [0, "Your wallet address is invalid, please check before attempting to reconnect."]}\n
+```json
+{"id": 4, "method": "mining.print", "params": [0, "Your wallet address is invalid, please check before attempting to reconnect."]}
 ```
 
 - [ `id` : `int` ]: request id
