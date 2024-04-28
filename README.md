@@ -132,12 +132,14 @@ This method call will only be executed by clients.
 #### Response
 
 ```json
-{ "id": 1, "result": ["ABC123"] }
+{ "id": 1, "result": ["ABC123", "EXTRANONCE", 32] }
 ```
 
 - [ `id` : `int` ]: request id
-- [ `result` : (`string`, `int`) ]:
+- [ `result` : (`string`, `string`, `int`) ]:
     1. This SHOULD be a unique session id
+    2. Extra nonce for the miner to use
+    3. The length of the extra nonce
 
 ### mining.authorize
 
@@ -162,16 +164,15 @@ This method call will only be executed by clients.
 #### Response
 
 ```json
-{"id": 2, "result": ["EXTRANONCE", 32]}
+{"id": 2, "result": true }
 ```
 
 - [ `id` : `int` ]: request id
-- [ `result` : (`string`, `int`) ]:
-      1. Extra nonce for the miner to use
-      2. The length of the extra nonce
-- [ `error` : (`int`, `string`, `object`) ]
-    - If authorization failed then it MUST contain error object with the
-      appropriate error id and description
+- [ `result` : `boolean` ]:
+    - MUST be `true` if the worker was authorized
+    - MUST be `false` if the worker was not authorized
+    - If the worker was not authorized, the server MUST respond with an error
+      message
 
 
 ### mining.set_difficulty
