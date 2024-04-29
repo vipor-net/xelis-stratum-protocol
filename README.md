@@ -302,6 +302,10 @@ This method call will only be executed by clients.
 #### Response
 No response is required for this call.
 
+## Optional
+
+The methods below are optional, but preferred.
+
 ### mining.print
 
 With this method a server can send a message to the miner to print on screen.
