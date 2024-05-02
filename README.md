@@ -68,16 +68,16 @@ Client                                Server
 ```
 
 ### Methods
-- [mining.subscribe](#mining-subscribe)
-- [mining.authorize](#mining-authorize)
-- [mining.notify](#mining-notify)
-- [mining.submit](#mining-submit)
-- [mining.set_difficulty](#mining-set_difficulty)
-- [mining.set_extranonce](#mining-set_extranonce)
-- [mining.ping](#mining-ping)
-- [mining.pong](#mining-pong)
-- [mining.print](#mining-print)
-- [mining.hashrate](#mining-hashrate)
+- [mining.subscribe](#miningsubscribe)
+- [mining.authorize](#miningauthorize)
+- [mining.notify](#miningnotify)
+- [mining.submit](#miningsubmit)
+- [mining.set_difficulty](#miningset_difficulty)
+- [mining.set_extranonce](#miningset_extranonce)
+- [mining.ping](#miningping)
+- [mining.pong](#miningpong)
+- [mining.print](#miningprint)
+- [mining.hashrate](#mininghashrate)
 
 
 ### Errors
@@ -114,7 +114,7 @@ Including `null` value in `error` object is against the JSON RPC spec. Error sho
 ## `MinerWork` Structure
 - `112` **bytes total**
 - `32` bytes (`0-31`) **Header work hash**
-- `8` bytes (`32-39`) **timestamp** _miner value_
+- `8` bytes (`32-39`) **timestamp** _provided in mining.notify_
 - `8` bytes (`40-47`) **nonce** _miner value_
 - `32` bytes (`48-79`) **extra nonce** _provided in mining.subscribe_
 - `32` bytes (`80-111`) **public key** _provided in mining.subscribe_
@@ -159,7 +159,7 @@ This method call will only be executed by clients.
 ```
 
 - `id` : `int`: request id
-- `result` : `[ string, string, int ]`:
+- `result` : `[ string, string, int, string ]`:
     1. This SHOULD be a unique session id
     2. Extra nonce for the miner to use
     3. The length of the extra nonce in bytes
@@ -227,13 +227,14 @@ This method call will only be executed by the server.
 
 - `id` : `int`: request id
 - `method` : `string`: RPC method name
-- `params` : `[ string, int, string, bool ]`
+- `params` : `[ string, int, string, string, bool ]`
     1. Job ID
     2. Timestamp (in milliseconds) to use for the job
     3. Header work hash (`32` bytes) - Blake3 hash of the block header (immutable)
-    3. Algorithm name
-    4. A boolean indicating whether the miners job queue should be emptied or not ("clean jobs")
+    4. Algorithm name
+    5. A boolean indicating whether the miners job queue should be emptied or not ("clean jobs")
 
+Miner should use the `timestamp` and `header work hash` to generate the [MinerWork Structure](#minerwork-structure), updating the nonce until a solution is found and then submit the nonce from any solutions found (below in `mining.submit`).
 
 #### Response
 
@@ -248,17 +249,16 @@ This method call will only be executed by clients.
 #### Request
 
 ```json
-{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "d70fd222", "98b6ac44d2", "000000123"]}
+{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "abc123", "000000123"]}
 ```
 
 - `id` : `int`: request id
 - `method` : `string`: RPC method name
-- `params` : `[ string, string, string, string ]`
+- `params` : `[ string, string, string ]`
   parameters
     1. Worker name
     2. Job ID
-    3. Timestamp
-    4. Miner nonce
+    3. Miner nonce
 
 #### Response
 
