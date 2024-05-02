@@ -161,7 +161,7 @@ This method call will only be executed by clients.
 - `id` : `int`: request id
 - `result` : `[ string, string, int, string ]`:
     1. This SHOULD be a unique session id
-    2. Extra nonce for the miner to use
+    2. Extra nonce for the miner to use (in hex format)
     3. The length of the extra nonce in bytes
     4. The public key to use (in hex format)
 
@@ -204,7 +204,7 @@ This method call will only be executed by clients.
 
 ### mining.notify
 
-The notify call is used to supply a worker with new work packages.
+The notify call is used to supply a worker with new work to be processed.
 
 This method call will only be executed by the server.
 
@@ -217,7 +217,7 @@ This method call will only be executed by the server.
   "method": "mining.notify",
   "params": [
     "abc123",
-    1714675998697,
+    "19726D97F49",
     "d9da51a0c3f8a1784911d370fdb617ea7f41581f5059d31e35f176b85efa5570",
     "xel/0",
     true
@@ -229,10 +229,11 @@ This method call will only be executed by the server.
 - `method` : `string`: RPC method name
 - `params` : `[ string, int, string, string, bool ]`
     1. Job ID
-    2. Timestamp (in milliseconds) to use for the job
+    2. Timestamp milliseconds (in hex format)
     3. Header work hash (`32` bytes) - Blake3 hash of the block header (immutable)
     4. Algorithm name
     5. A boolean indicating whether the miners job queue should be emptied or not ("clean jobs")
+       - Majority of the time this is meant for signifying to the miner that the block they are mining has already been found, and they should start mining on a new block height.
 
 Miner should use the `timestamp` and `header work hash` to generate the [MinerWork Structure](#minerwork-structure), updating the nonce until a solution is found and then submit the nonce from any solutions found (below in `mining.submit`).
 
@@ -249,7 +250,15 @@ This method call will only be executed by clients.
 #### Request
 
 ```json
-{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "abc123", "000000123"]}
+{
+  "id": 4,
+  "method": "mining.submit",
+  "params": [
+    "WORKER_NAME",
+    "abc123",
+    "0011223344556677"
+  ]
+}
 ```
 
 - `id` : `int`: request id
@@ -258,7 +267,7 @@ This method call will only be executed by clients.
   parameters
     1. Worker name
     2. Job ID
-    3. Miner nonce
+    3. Miner nonce (in hex format)
 
 #### Response
 
@@ -324,7 +333,7 @@ This method call will only be executed by the server.
 - `id` : `int`: request id
 - `method` : `string`: RPC method name
 - `params` : `[ string, int ]`:
-  1. New extra nonce to use
+  1. New extra nonce to use (in hex format)
   2. The length of the extra nonce in bytes
 
 Any subsequent jobs started by a client after receiving this update **MUST** honor the new extranonce and servers will reject any shares below this difficulty.
