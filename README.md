@@ -1,4 +1,7 @@
-# Stratum
+# Xelis Stratum Protocol
+
+**Version:** 0.1.0
+**Last Updated:** 5/2/2024
 
 This document describes a protocol, that allows a group of miners to connect
 to a server, which coordinates the distribution of work packages among
