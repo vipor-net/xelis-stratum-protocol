@@ -1,4 +1,7 @@
-# Stratum
+# Xelis Stratum Protocol
+
+**Version:** 0.1.0
+**Last Updated:** 5/2/2024
 
 This document describes a protocol, that allows a group of miners to connect
 to a server, which coordinates the distribution of work packages among
@@ -68,15 +71,16 @@ Client                                Server
 ```
 
 ### Methods
-- [mining.subscribe](#mining-subscribe)
-- [mining.authorize](#mining-authorize)
-- [mining.notify](#mining-notify)
-- [mining.set_difficulty](#mining-set_difficulty)
-- [mining.submit](#mining-submit)
-- [mining.ping](#mining-ping)
-- [mining.pong](#mining-pong)
-- [mining.print](#mining-print)
-- [mining.hashrate](#mining-hashrate)
+- [mining.subscribe](#miningsubscribe)
+- [mining.authorize](#miningauthorize)
+- [mining.notify](#miningnotify)
+- [mining.submit](#miningsubmit)
+- [mining.set_difficulty](#miningset_difficulty)
+- [mining.set_extranonce](#miningset_extranonce)
+- [mining.ping](#miningping)
+- [mining.pong](#miningpong)
+- [mining.print](#miningprint)
+- [mining.hashrate](#mininghashrate)
 
 
 ### Errors
@@ -84,9 +88,9 @@ Client                                Server
 Whenever an RPC call triggers an error, the response MUST include an `error`
 field which maps to a **list** of the following values:
 
-- [ `code` : `int` ]
-- [ `message` : `string` ]
-- [ `data` : `object` ]
+- `code` : `int`
+- `message` : `string`
+- `data` : `object`
 
 ```json
 {"id": 10, "result": null, "error": [21, "Job not found", null]}
@@ -110,6 +114,15 @@ information relevant to the error.
 
 Including `null` value in `error` object is against the JSON RPC spec. Error should only be included in the response when there is an actual error.
 
+## `MinerWork` Structure
+- `112` **bytes total**
+- `32` bytes (`0-31`) **Header work hash**
+- `8` bytes (`32-39`) **timestamp** _provided in mining.notify_
+- `8` bytes (`40-47`) **nonce** _miner value_
+- `32` bytes (`48-79`) **extra nonce** _provided in mining.subscribe_
+- `32` bytes (`80-111`) **public key** _provided in mining.subscribe_
+
+
 ### mining.subscribe
 
 In order to initiate a session with the server, a client needs to call the subscribe method.
@@ -120,27 +133,40 @@ This method call will only be executed by clients.
 #### Request:
 
 ```json
-{"id": 1, "method": "mining.subscribe", "params": ["MyMiner/1.0.0"]}
+{
+  "id": 1,
+  "method": "mining.subscribe",
+  "params": ["MyMiner/1.0.0", ["xel/0", "xel/1"]]
+}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
-- [ `params` : (`string`) ]: list of method
-  parameters
-  1. MUST be name and version of mining software in the given format or empty
-     string
+- `id` : `int`: request id
+- `method` : `string`: RPC method name
+- `params` : `[ string, [ string ] ]`
+  1. MUST be the name and version of the mining software in the given format or an empty string.
+  2. OPTIONAL, specifies a list of supported mining algorithms. If omitted, a default algorithm `xel/0` or the most commonly supported algorithm can be used.
+  _As of 5/2/2024 Xelis only supports one algo `xel/0` this is here only for future enhancements or new algos_
 
 #### Response
 
 ```json
-{ "id": 1, "result": ["ABC123", "EXTRANONCE", 32] }
+{ 
+  "id": 1,
+  "result": [
+    "ABC123",
+    "EXTRANONCE",
+    32,
+    "7e40899c7bcc885fad6dd3bdc68fa73141c1d8b917a1f399afeb1fb191376b16"
+  ]
+}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `result` : (`string`, `string`, `int`) ]:
+- `id` : `int`: request id
+- `result` : `[ string, string, int, string ]`:
     1. This SHOULD be a unique session id
-    2. Extra nonce for the miner to use
-    3. The length of the extra nonce
+    2. Extra nonce for the miner to use (in hex format)
+    3. The length of the extra nonce in bytes
+    4. The public key to use (in hex format)
 
 ### mining.authorize
 
@@ -151,12 +177,16 @@ This method call will only be executed by clients.
 #### Request
 
 ```json
-{"id": 2, "method": "mining.authorize", "params": ["xel:WALLET_ADDRESS", "WORKER_NAME", "WORKER_PASSWORD"]}
+{
+  "id": 2,
+  "method": "mining.authorize",
+  "params": ["xel:WALLET_ADDRESS", "WORKER_NAME", "WORKER_PASSWORD"]
+}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
-- [ `params` : (`string`, `string`, `string`) ]: list of method parameters
+- `id` : `int`: request id
+- `method` : `string`: RPC method name
+- `params` : `[ string, string, string ]`
     1. The miner wallet address
     2. The worker name
     3. The worker password
@@ -168,46 +198,16 @@ This method call will only be executed by clients.
 {"id": 2, "result": true }
 ```
 
-- [ `id` : `int` ]: request id
-- [ `result` : `boolean` ]:
+- `id` : `int`: request id
+- `result` : `boolean`:
     - MUST be `true` if the worker was authorized
     - MUST be `false` if the worker was not authorized
     - If the worker was not authorized, the server MUST respond with an error
       message
 
-
-### mining.set_difficulty
-
-The target difficulty for a share can change and a server needs to be able to notify clients of that.
-
-This method call will only be executed by the server.
-
-
-#### Request
-
-```json
-{"id": null, "method": "mining.set_difficulty", "params": [1]}
-```
-
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
-- [ `params` : (`int`) ]:
-    1. The target difficulty
-
-Any subsequent jobs started by a client after receiving this update MUST
-honor the new target and servers will reject any shares below this difficulty.
-
-This SHOULD be followed by a `mining.notify` call.
-
-
-#### Response
-
-There is no explicit response for this call.
-
-
 ### mining.notify
 
-The notify call is used to supply a worker with new work packages.
+The notify call is used to supply a worker with new work to be processed.
 
 This method call will only be executed by the server.
 
@@ -215,17 +215,30 @@ This method call will only be executed by the server.
 #### Request
 
 ```json
-{"id": null, "method": "mining.notify", "params": ["d70fd222", "abc123", "def456", true ]}
+{
+  "id": 1,
+  "method": "mining.notify",
+  "params": [
+    "abc123",
+    "19726D97F49",
+    "d9da51a0c3f8a1784911d370fdb617ea7f41581f5059d31e35f176b85efa5570",
+    "xel/0",
+    true
+  ]
+}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
-- [ `params` : (`string`, `int`, `string`, `bool`) ]: list of method parameters
+- `id` : `int`: request id
+- `method` : `string`: RPC method name
+- `params` : `[ string, int, string, string, bool ]`
     1. Job ID
-    2. Work hash
-    3. Public key
-    4. A boolean indicating whether the miners job queue should be emptied or not ("clean jobs")
+    2. Timestamp milliseconds (in hex format)
+    3. Header work hash (`32` bytes) - Blake3 hash of the block header (immutable)
+    4. Algorithm name
+    5. A boolean indicating whether the miners job queue should be emptied or not ("clean jobs")
+       - Majority of the time this is meant for signifying to the miner that the block they are mining has already been found, and they should start mining on a new block height.
 
+Miner should use the `timestamp` and `header work hash` to generate the [MinerWork Structure](#minerwork-structure), updating the nonce until a solution is found and then submit the nonce from any solutions found (below in `mining.submit`).
 
 #### Response
 
@@ -237,21 +250,27 @@ There is no explicit response for this call.
 With this method a worker can submit solutions for the mining puzzle.
 This method call will only be executed by clients.
 
-
 #### Request
 
 ```json
-{"id": 4, "method": "mining.submit", "params": ["WORKER_NAME", "d70fd222", "98b6ac44d2", "000000123"]}
+{
+  "id": 4,
+  "method": "mining.submit",
+  "params": [
+    "WORKER_NAME",
+    "abc123",
+    "0011223344556677"
+  ]
+}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
-- [ `params` : (`string`, `string`, `string`, `string`) ]: list of method
+- `id` : `int`: request id
+- `method` : `string`: RPC method name
+- `params` : `[ string, string, string ]`
   parameters
     1. Worker name
     2. Job ID
-    3. Timestamp
-    4. Miner nonce
+    3. Miner nonce (in hex format)
 
 #### Response
 
@@ -259,12 +278,74 @@ This method call will only be executed by clients.
 {"id": 4, "result": true}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `result`: `bool` ]: submission accepted
+- `id` : `int`: request id
+- `result`: `bool`: submission accepted
     - MUST be `true` if accepted
-- [ `error` : (`int`, `string`, `object`) ]
+- `error` : `[ int, string, object ]`
     - If submission failed then it MUST contain error object with the
       appropriate error id and description
+
+### mining.set_difficulty
+
+The target difficulty for a share can change and a server needs to be able to notify clients of that.
+
+This method call will only be executed by the server.
+
+
+#### Request
+
+```json
+{
+  "id": 1,
+  "method": "mining.set_difficulty",
+  "params": [1]
+}
+```
+
+- `id` : `int`: request id
+- `method` : `string`: RPC method name
+- `params` : `[ int ]`:
+  1. The target difficulty
+
+Any subsequent jobs started by a client after receiving this update **MUST** honor the new target and servers will reject any shares below this difficulty.
+
+This **SHOULD** be followed by a `mining.notify` call.
+
+
+#### Response
+
+There is no explicit response for this call.
+
+
+### mining.set_extranonce
+
+The extra nonce for a share can change and a server needs to be able to notify clients of that.
+
+This method call will only be executed by the server.
+
+#### Request
+
+```json
+{
+  "id": 1,
+  "method": "mining.set_extranonce",
+  "params": ["EXTRANONCE", 32]
+}
+```
+
+- `id` : `int`: request id
+- `method` : `string`: RPC method name
+- `params` : `[ string, int ]`:
+  1. New extra nonce to use (in hex format)
+  2. The length of the extra nonce in bytes
+
+Any subsequent jobs started by a client after receiving this update **MUST** honor the new extranonce and servers will reject any shares below this difficulty.
+
+This **SHOULD** be followed by a `mining.notify` call.
+
+#### Response
+
+There is no explicit response for this call.
 
 ### mining.ping
 
@@ -278,8 +359,8 @@ This method call will only be executed by servers.
 {"id": 4, "method": "mining.ping"}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
+- `id` : `int` ]: request id
+- `method` : `string` ]: RPC method name
 
 #### Response
 No response is required for this call.  The client should respond with a `mining.pong` call.
@@ -296,8 +377,8 @@ This method call will only be executed by clients.
 {"id": 4, "method": "mining.pong"}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
+- `id` : `int` ]: request id
+- `method` : `string` ]: RPC method name
 
 #### Response
 No response is required for this call.
@@ -316,9 +397,9 @@ With this method a server can send a message to the miner to print on screen.
 {"id": 4, "method": "mining.print", "params": [0, "Your wallet address is invalid, please check before attempting to reconnect."]}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
-- [ `params` : (`int`, `string`) ]: list of method
+- `id` : `int` ]: request id
+- `method` : `string` ]: RPC method name
+- `params` : (`int`, `string`) ]: list of method
   parameters
   1. Print level
   2. Message to print
@@ -343,9 +424,9 @@ With this method a client/miner can submit the reported hashrate (in miner) to t
 {"id": 4, "method": "mining.hashrate", "params": [1000]}
 ```
 
-- [ `id` : `int` ]: request id
-- [ `method` : `string` ]: RPC method name
-- [ `params` : (`int`, `string`) ]: list of method
+- `id` : `int` ]: request id
+- `method` : `string` ]: RPC method name
+- `params` : (`int`, `string`) ]: list of method
   parameters
   1. Reported hashrate in H/s
 
