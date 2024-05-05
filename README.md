@@ -1,7 +1,7 @@
 # Xelis Stratum Protocol
 
-**Version:** 0.1.0
-**Last Updated:** 5/2/2024
+**Version:** 0.1.1
+**Last Updated:** 5/5/2024
 
 This document describes a protocol, that allows a group of miners to connect
 to a server, which coordinates the distribution of work packages among
@@ -85,19 +85,17 @@ Client                                Server
 
 ### Errors
 
-Whenever an RPC call triggers an error, the response MUST include an `error`
-field which maps to a **list** of the following values:
+Whenever an RPC call triggers an error, the response MUST include an `error` field which maps to a **list** of the following values:
 
 - `code` : `int`
 - `message` : `string`
 - `data` : `object`
 
 ```json
-{"id": 10, "result": null, "error": [21, "Job not found", null]}
+{"id": 10, "result": null, "error": {"code": 20, "message": "Invalid request", "data": null}}
 ```
 
-Errors SHOULD be identified by their `code` and programs SHOULD do error
-handling based on the `code` and not the `message`.
+Errors SHOULD be identified by their `code` and programs SHOULD do error handling based on the `code` and not the `message`.
 Available error codes, in addition to the codes defined in the [JSON RPC 2.0]() specification, are:
 
 - `20` - Other/Unknown
@@ -281,9 +279,6 @@ This method call will only be executed by clients.
 - `id` : `int`: request id
 - `result`: `bool`: submission accepted
     - MUST be `true` if accepted
-- `error` : `[ int, string, object ]`
-    - If submission failed then it MUST contain error object with the
-      appropriate error id and description
 
 ### mining.set_difficulty
 
