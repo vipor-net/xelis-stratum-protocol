@@ -134,7 +134,7 @@ This method call will only be executed by clients.
 {
   "id": 1,
   "method": "mining.subscribe",
-  "params": ["MyMiner/1.0.0", ["xel/0", "xel/1"]]
+  "params": ["MyMiner/1.0.0", ["xel/v2"]]
 }
 ```
 
@@ -142,8 +142,12 @@ This method call will only be executed by clients.
 - `method` : `string`: RPC method name
 - `params` : `[ string, [ string ] ]`
   1. MUST be the name and version of the mining software in the given format or an empty string.
-  2. OPTIONAL, specifies a list of supported mining algorithms. If omitted, a default algorithm `xel/0` or the most commonly supported algorithm can be used.
-  _As of 5/2/2024 Xelis only supports one algo `xel/0` this is here only for future enhancements or new algos_
+  2. OPTIONAL, specifies a list of supported mining algorithms. If omitted, a default algorithm `xel/v2` or the most recent algorithm will be used.
+  _As of 7/11/2024 Xelis only supports one algo `xel/v2`_
+
+Miners please use `xel/v2`
+
+Pool operators, for backwards compatibility, you should also support `xel/1`.  The stratum protocol originally used `xel/0` and `xel/1` but the node uses `xel/v1` and `xel/v2`. As a pool operator, if a miner sends `xel/1` you should consider this to be `xel/v2`
 
 #### Response
 
